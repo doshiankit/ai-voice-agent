@@ -80,4 +80,5 @@ temp/
 *.tmp
 *.log
 *_venv/
-
+services/tts_service/app/voices/
+.venv
