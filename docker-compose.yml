@@ -1,0 +1,70 @@
+
+# This defines all the parts of your application
+services:
+  # SERVICE 1: Speech-to-Text with Whisper
+  stt_service:
+    build: ./services/stt_service  # Tells Docker where to find the Dockerfile to build this service
+    container_name: container_stt  # Gives the container a fixed, friendly name
+    ports:
+      - "8001:8001"  # Maps HOST port 8001 to CONTAINER port 8001. You'll access the API at http://<server-ip>:8001
+    # GPU passthrough is critical for AI performance
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    volumes:
+      - ./services/stt_service/cache:/root/.cache  # Persists the downloaded model so you don't re-download it every time
+    networks:
+      - ai_net  # Puts this container on a custom network for easy communication
+    restart: unless-stopped  # Automatically restarts if it crashes
+
+  # SERVICE 2: Local LLM via Ollama (for RAG/testing)
+  ollama:
+    image: ollama/ollama:latest  # Uses the official pre-built image
+    container_name: container_ollama
+    ports:
+      - "11434:11434"  # Ollama's API port
+    # GPU access for fast LLM inference
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    volumes:
+      - ollama_data:/root/.ollama  # Stores all pulled LLM models here
+    networks:
+      - ai_net
+    restart: unless-stopped
+  tts_service:
+    build: ./services/tts_service
+    container_name: container_tts
+    ports:
+      - "8002:8002"
+    volumes:
+      - ./services/tts_service/voices:/app/voices  # For custom voice models
+    networks:
+      - ai_net
+    restart: unless-stopped
+  simulator_agent:
+    build: ./services/simulator_agent
+    container_name: container_simulator
+    volumes:
+      - ./services/simulator_agent:/app
+    working_dir: /app
+    command: ["tail", "-f", "/dev/null"]  # Keeps container running
+    networks:
+      - ai_net
+    restart: unless-stopped
+# A named volume for Ollama's data. Docker manages its location.
+volumes:
+  ollama_data:
+
+# A custom network. Containers on this network can talk to each other using their service name as a hostname (e.g., 'stt_service').
+networks:
+  ai_net:
+    driver: bridge

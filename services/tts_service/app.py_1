@@ -1,0 +1,154 @@
+from fastapi import FastAPI, HTTPException, Query
+from fastapi.responses import JSONResponse
+from pydub import AudioSegment
+import piper
+import numpy as np
+import io
+import base64
+import os
+from typing import Optional
+
+app = FastAPI(title="TTS Service")
+
+# Initialize the Piper TTS engine
+VOICE_PATH = "app/voices/en_US-amy-medium.onnx"
+
+print(f"Loading Piper TTS from {VOICE_PATH}...")
+try:
+    tts_engine = piper.PiperVoice.load(VOICE_PATH)
+    print("TTS engine ready.")
+except Exception as e:
+    print(f"Failed to initialize TTS engine: {e}")
+    tts_engine = None
+
+@app.post("/synthesize")
+async def synthesize_speech(
+    text: str = Query(..., description="Text to synthesize"),
+    language: str = Query("en", description="Language code")
+):
+    """
+    Convert text to speech using Piper TTS.
+    Returns JSON with base64 encoded audio and sample rate.
+    """
+    if not text or len(text.strip()) == 0:
+        raise HTTPException(status_code=400, detail="Text cannot be empty.")
+
+    if tts_engine is None:
+        raise HTTPException(status_code=500, detail="TTS engine not available.")
+
+    try:
+        # Synthesize speech - returns a generator of AudioChunk objects
+        audio_chunks_generator = tts_engine.synthesize(text.strip())
+        
+        # Collect all audio chunks (usually just one chunk for short text)
+        audio_chunks = list(audio_chunks_generator)
+        
+        if not audio_chunks:
+            raise HTTPException(status_code=500, detail="No audio generated")
+        
+        # Get the first (and usually only) chunk
+        audio_chunk = audio_chunks[0]
+        
+        # Get sample rate
+        sample_rate = audio_chunk.sample_rate
+        print(f"Sample rate: {sample_rate}")
+        
+        # Get audio data - try different attributes in order of preference
+        audio_bytes = None
+        
+        # 1. Try audio_int16_bytes (already in int16 format as bytes)
+        if hasattr(audio_chunk, 'audio_int16_bytes') and audio_chunk.audio_int16_bytes:
+            audio_bytes = audio_chunk.audio_int16_bytes
+            print(f"Using audio_int16_bytes, length: {len(audio_bytes)}")
+        
+        # 2. Try audio_int16_array (numpy array of int16)
+        elif hasattr(audio_chunk, 'audio_int16_array') and audio_chunk.audio_int16_array is not None:
+            audio_array = audio_chunk.audio_int16_array
+            audio_bytes = audio_array.tobytes()
+            print(f"Using audio_int16_array, shape: {audio_array.shape}, dtype: {audio_array.dtype}")
+        
+        # 3. Try audio_float_array (numpy array of floats, need to convert to int16)
+        elif hasattr(audio_chunk, 'audio_float_array') and audio_chunk.audio_float_array is not None:
+            audio_float = audio_chunk.audio_float_array
+            # Convert from float [-1, 1] to int16
+            audio_int16 = (audio_float * 32767).astype(np.int16)
+            audio_bytes = audio_int16.tobytes()
+            print(f"Using audio_float_array, shape: {audio_float.shape}, dtype: {audio_float.dtype}")
+        
+        # 4. Try to get raw data via __array__ or other methods
+        else:
+            # Try to convert chunk to numpy array
+            try:
+                audio_array = np.array(audio_chunk)
+                if audio_array.dtype == np.float32 or audio_array.dtype == np.float64:
+                    audio_int16 = (audio_array * 32767).astype(np.int16)
+                else:
+                    audio_int16 = audio_array.astype(np.int16)
+                audio_bytes = audio_int16.tobytes()
+                print(f"Using numpy conversion, shape: {audio_array.shape}, dtype: {audio_array.dtype}")
+            except Exception as e:
+                print(f"Failed to convert audio chunk to numpy: {e}")
+        
+        if audio_bytes is None:
+            raise HTTPException(status_code=500, detail="Could not extract audio data from chunk")
+        
+        # Check if we have sample_width and channels
+        sample_width = getattr(audio_chunk, 'sample_width', 2)  # Default to 2 bytes (16-bit)
+        channels = getattr(audio_chunk, 'sample_channels', 1)   # Default to mono
+        
+        print(f"Audio parameters: sample_rate={sample_rate}, sample_width={sample_width}, channels={channels}")
+        print(f"Audio bytes length: {len(audio_bytes)}")
+        
+        # Create a WAV file in memory using pydub
+        audio_buffer = io.BytesIO()
+        
+        # Create AudioSegment
+        audio_segment = AudioSegment(
+            audio_bytes,
+            frame_rate=sample_rate,
+            sample_width=sample_width,
+            channels=channels
+        )
+        
+        # Export to WAV format in memory
+        audio_segment.export(audio_buffer, format="wav")
+        audio_buffer.seek(0)
+        
+        # Get the WAV data
+        wav_data = audio_buffer.read()
+        
+        # Encode to base64
+        audio_base64 = base64.b64encode(wav_data).decode('utf-8')
+        
+        return JSONResponse(content={
+            "audio": audio_base64,
+            "sample_rate": sample_rate,
+            "format": "wav",
+            "text_length": len(text),
+            "audio_size_bytes": len(wav_data)
+        })
+        
+    except Exception as e:
+        import traceback
+        error_details = traceback.format_exc()
+        print(f"TTS synthesis error: {error_details}")
+        raise HTTPException(status_code=500, detail=f"TTS synthesis failed: {str(e)}")
+
+@app.get("/health")
+async def health_check():
+    return {"status": "healthy", "service": "TTS"}
+
+@app.get("/voices")
+async def list_voices():
+    """List available voice models."""
+    voices = []
+    voices_dir = "app/voices"
+    if os.path.exists(voices_dir):
+        for f in os.listdir(voices_dir):
+            if f.endswith(".onnx"):
+                voices.append(f)
+    return {"voices": voices}
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8002)

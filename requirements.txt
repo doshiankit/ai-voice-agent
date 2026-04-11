@@ -1,0 +1,13 @@
+fastapi==0.104.1
+uvicorn==0.24.0
+python-dotenv==1.2.1
+python-multipart==0.0.6
+requests==2.32.5
+pydantic==2.12.5
+starlette==0.27.0
+tiktoken==0.12.0
+openai-whisper==20231117
+torch==2.2.1
+torchaudio==2.2.1
+numpy==2.1.2
+ffmpeg-python==0.2.0

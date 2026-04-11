@@ -1,0 +1,11 @@
+<include>
+  <context name="default">
+    <extension name="voicebot_5000_override">
+      <condition field="destination_number" expression="^5000$">
+        <action application="answer"/>
+        <action application="lua" data="voicebot_5000.lua"/>
+      </condition>
+    </extension>
+
+  </context>
+</include>
