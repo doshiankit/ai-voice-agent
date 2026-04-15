@@ -61,11 +61,64 @@ local function should_end(transcript)
 end
 
 -- Config
-local BASE_URL = "http://62.107.25.198"  -- replace with your Vast.ai IP
+local function load_env(filepath)
+    local file = io.open(filepath, "r")
+    if not file then
+        freeswitch.consoleLog("ERR", "[voicebot] Could not open .env file: " .. filepath .. "\n")
+        return {}
+    end
+    
+    local env = {}
+    for line in file:lines() do
+        -- Ignore comments and empty lines
+        line = line:match("^%s*(.-)%s*$") -- trim
+        if line ~= "" and not line:match("^#") then
+            local key, value = line:match("^([%w_]+)%s*=%s*(.+)$")
+            if key and value then
+                -- Remove quotes if present
+                value = value:gsub("^['\"]", ""):gsub("['\"]$", "")
+                env[key] = value
+            end
+        end
+    end
+    file:close()
+    return env
+end
 
-local STT_URL   = BASE_URL .. ":33903/transcribe?sample_rate=16000&language=en"
-local TTS_URL   = BASE_URL .. ":33881/synthesize"
-local AGENT_URL = BASE_URL .. ":33196/chat"
+-- Attempt to load .env from standard locations
+local env_vars = {}
+local env_paths = {
+    "/etc/freeswitch/.env",          -- Docker/Linux standard
+    "/usr/local/freeswitch/conf/.env",
+    "./.env"                          -- Running from script dir
+}
+
+for _, p in ipairs(env_paths) do
+    local f = io.open(p, "r")
+    if f then
+        f:close()
+        env_vars = load_env(p)
+        freeswitch.consoleLog("INFO", "[voicebot] Loaded .env from: " .. p .. "\n")
+        break
+    end
+end
+
+-- Helper to get env with fallback (keeps script running if .env missing)
+local function get_env(key, default)
+    return env_vars[key] or default
+end
+
+-- ==========================================
+-- 2. CONFIGURATION (USING ENV VARS)
+-- ==========================================
+local BASE_URL = get_env("VOICEBOT_BASE_URL", "http://127.0.0.1")
+local STT_PORT = get_env("VOICEBOT_STT_PORT", "8001")
+local TTS_PORT = get_env("VOICEBOT_TTS_PORT", "8002")
+local AGENT_PORT = get_env("VOICEBOT_AGENT_PORT", "8003")
+
+local STT_URL   = BASE_URL .. ":" .. STT_PORT .. "/transcribe?sample_rate=16000&language=en"
+local TTS_URL   = BASE_URL .. ":" .. TTS_PORT .. "/synthesize"
+local AGENT_URL = BASE_URL .. ":" .. AGENT_PORT .. "/chat"
 
 local HELLO_TEXT = "Hello! How can I help you today?"
 local BYE_TEXT   = "Thank you. Goodbye."

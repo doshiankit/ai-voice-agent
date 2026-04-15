@@ -1,17 +1,33 @@
 #!/usr/bin/env python3
 """
 AI Agent Service - VoIP/FreeSWITCH Support Agent (TTS‑optimised)
+Uses Groq LLM for intelligent, contextual responses.
 """
-
-from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel
-from typing import Optional, Dict, Any
+import os
 import time
 import uuid
 import re
+from typing import Optional, Dict, Any, List
 
-app = FastAPI(title="AI Agent Service", version="2.1.0")
+from fastapi import FastAPI, HTTPException
+from pydantic import BaseModel
+from groq import Groq
 
+app = FastAPI(title="AI Agent Service", version="2.2.0")
+
+# ------------------------------------------------------------------
+# Groq Setup
+# ------------------------------------------------------------------
+GROQ_API_KEY = os.environ.get("GROQ_API_KEY")
+if not GROQ_API_KEY:
+    raise RuntimeError("GROQ_API_KEY environment variable is not set")
+
+client = Groq(api_key=GROQ_API_KEY)
+GROQ_MODEL = "llama3-8b-8192"   # Fast and free tier friendly
+
+# ------------------------------------------------------------------
+# Data Models
+# ------------------------------------------------------------------
 class ChatRequest(BaseModel):
     text: str
     conversation_id: Optional[str] = None
@@ -20,6 +36,9 @@ class ChatResponse(BaseModel):
     response: str
     conversation_id: Optional[str] = None
 
+# ------------------------------------------------------------------
+# Conversation Memory (in‑memory, TTL 30 minutes)
+# ------------------------------------------------------------------
 CONV_TTL_SECONDS = 60 * 30
 conversations: Dict[str, Dict[str, Any]] = {}
 
@@ -41,8 +60,17 @@ def _get_or_create_conversation(conversation_id: Optional[str]) -> str:
         conversations[cid] = {
             "created_at": _now(),
             "updated_at": _now(),
-            "turns": 0,
-            "slots": {"issue": None, "platform": None, "impact": None}
+            "history": [
+                {
+                    "role": "system",
+                    "content": (
+                        "You are a senior VoIP support engineer helping customers troubleshoot FreeSWITCH issues. "
+                        "Keep responses concise (max 3 sentences) and give exact command‑line steps when appropriate. "
+                        "Do not use markdown or numbered lists – plain spoken English only."
+                    )
+                }
+            ],
+            "turns": 0
         }
     return cid
 
@@ -50,145 +78,74 @@ def _update_conversation(cid: str):
     conversations[cid]["updated_at"] = _now()
     conversations[cid]["turns"] += 1
 
-def _norm(s: str) -> str:
-    return re.sub(r"\s+", " ", (s or "").strip().lower())
+def _add_to_history(cid: str, role: str, content: str):
+    conversations[cid]["history"].append({"role": role, "content": content})
 
-def _contains_any(text: str, words):
-    return any(w in text for w in words)
-
-def _is_end_user(text: str) -> bool:
-    return _contains_any(text, ["bye", "goodbye", "thank you", "thanks", "that is all"])
-
-def _detect_domain_issue(text: str) -> str:
-    # Catch all common mis‑transcriptions of FreeSWITCH
-    if _contains_any(text, [
-        "freeswitch", "free switch", "free speech", "pre page", "pre pitch",
-        "free swich", "all way switch", "all way"
-    ]):
-        return "check_freeswitch_running"
-
-    if _contains_any(text, ["no calls", "calls are down", "calls down", "calls not running", "call down"]):
-        return "calls_down"
-
-    if _contains_any(text, ["sip", "registration", "registered", "unregistered", "sofia"]):
-        return "sip_registration"
-
-    if _contains_any(text, ["no audio", "one way audio", "rtp", "media"]):
-        return "no_audio"
-
-    if _contains_any(text, ["cpu high", "memory", "ram", "disk full", "load"]):
-        return "system_resources"
-
-    if _contains_any(text, ["logs", "error", "debug"]):
-        return "check_logs"
-
-    if _contains_any(text, ["help", "support", "assist"]):
-        return "general_support"
-
-    return "unknown"
-
+# ------------------------------------------------------------------
+# TTS‑friendly Text Cleanup
+# ------------------------------------------------------------------
 def _tts_friendly(text: str) -> str:
     """
-    Convert technical text into something a TTS engine can speak clearly.
-    - Replace newlines with pauses (using periods).
-    - Remove quotes.
-    - Optionally add "first", "second" etc. if it's a list.
+    Convert LLM output into something a TTS engine can speak clearly.
+    - Removes markdown, quotes, and excessive newlines.
+    - Replaces numbered lists with "First, ... Second, ..."
     """
-    # Replace numbered list with "First, ... Second, ..."
+    # Remove markdown code blocks and backticks
+    text = re.sub(r'```.*?```', '', text, flags=re.DOTALL)
+    text = re.sub(r'`([^`]*)`', r'\1', text)
+    text = text.replace('*', '').replace('_', '').replace('"', '')
+
     lines = text.split('\n')
     spoken_lines = []
-    for i, line in enumerate(lines):
+    for line in lines:
         line = line.strip()
         if not line:
             continue
-        # If line starts with a number and a parenthesis, convert
-        if re.match(r'^\d+[\)\.]', line):
-            # e.g., "1) systemctl ..." -> "First, systemctl ..."
-            number = int(re.match(r'^(\d+)[\)\.]', line).group(1))
-            if number == 1:
-                prefix = "First"
-            elif number == 2:
-                prefix = "Second"
-            elif number == 3:
-                prefix = "Third"
-            elif number == 4:
-                prefix = "Fourth"
-            elif number == 5:
-                prefix = "Fifth"
-            else:
-                prefix = f"Step {number}"
-            line = re.sub(r'^\d+[\)\.]\s*', prefix + ', ', line)
+        # Convert "1) command" → "First, command"
+        match = re.match(r'^(\d+)[\)\.]\s*(.*)$', line)
+        if match:
+            num = int(match.group(1))
+            rest = match.group(2)
+            prefixes = {1: "First", 2: "Second", 3: "Third", 4: "Fourth", 5: "Fifth"}
+            prefix = prefixes.get(num, f"Step {num}")
+            line = f"{prefix}, {rest}"
         spoken_lines.append(line)
-    # Join with ". " to create natural pauses
-    return ". ".join(spoken_lines).replace('"', '')
 
-def _reply_for_intent(intent: str) -> str:
-    if intent in ("check_freeswitch_running", "calls_down", "general_support"):
-        raw = (
-            "To confirm FreeSWITCH is running, run these commands on the server:\n"
-            "1) systemctl status freeswitch --no-pager -l\n"
-            "2) fs_cli -x \"status\"\n"
-            "3) fs_cli -x \"sofia status\"\n"
-            "4) ss -lntup | grep -E \"5060|5061|8021|freeswitch\"\n"
-            "5) tail -n 200 /usr/local/freeswitch/log/freeswitch.log\n\n"
-            "Tell me: are ALL calls down, or only SOME calls?"
+    return ". ".join(spoken_lines)
+
+# ------------------------------------------------------------------
+# LLM Call
+# ------------------------------------------------------------------
+def _get_llm_response(cid: str, user_text: str) -> str:
+    """Send user message to Groq LLM and return TTS‑friendly reply."""
+    history = conversations[cid]["history"]
+
+    # Add user message
+    _add_to_history(cid, "user", user_text)
+
+    try:
+        response = client.chat.completions.create(
+            model=GROQ_MODEL,
+            messages=history,          # entire conversation context
+            max_tokens=200,
+            temperature=0.5,
         )
-        return _tts_friendly(raw)
+        reply = response.choices[0].message.content
 
-    if intent == "sip_registration":
-        raw = (
-            "To check SIP registrations:\n"
-            "1) fs_cli -x \"sofia status\"\n"
-            "2) fs_cli -x \"sofia status profile internal reg\"\n"
-            "3) fs_cli -x \"sofia status profile internal\"\n\n"
-            "Tell me the extension number and whether it shows as Registered."
-        )
-        return _tts_friendly(raw)
+        # Add assistant reply to history
+        _add_to_history(cid, "assistant", reply)
 
-    if intent == "no_audio":
-        raw = (
-            "For no‑audio or one‑way audio:\n"
-            "1) fs_cli -x \"show channels\"\n"
-            "2) fs_cli -x \"uuid_dump <call_uuid>\"\n"
-            "3) tcpdump -nni any udp portrange 10000-65000\n"
-            "4) Check NAT settings: external_rtp_ip and external_sip_ip in sofia profile\n\n"
-            "Tell me: is it one‑way audio or no audio both ways?"
-        )
-        return _tts_friendly(raw)
+        return _tts_friendly(reply)
 
-    if intent == "system_resources":
-        raw = (
-            "To check server resources:\n"
-            "1) uptime\n"
-            "2) free -h\n"
-            "3) df -h\n"
-            "4) top -o \%CPU\n"
-            "5) journalctl -u freeswitch -n 200 --no-pager\n\n"
-            "Tell me your CPU load and free memory."
-        )
-        return _tts_friendly(raw)
+    except Exception as e:
+        # Fallback in case of API error
+        fallback = "I'm having trouble reaching the language model right now. Please try again in a moment."
+        _add_to_history(cid, "assistant", fallback)
+        return fallback
 
-    if intent == "check_logs":
-        raw = (
-            "To check FreeSWITCH logs:\n"
-            "1) tail -n 200 /usr/local/freeswitch/log/freeswitch.log\n"
-            "2) grep -i \"error\\|crit\\|fail\" /usr/local/freeswitch/log/freeswitch.log | tail -n 50\n"
-            "3) journalctl -u freeswitch -n 200 --no-pager\n\n"
-            "If you paste the last 30 error lines, I can tell the exact cause."
-        )
-        return _tts_friendly(raw)
-
-    # unknown
-    return _tts_friendly(
-        "I can help with FreeSWITCH and VoIP support. "
-        "Please say one of these: "
-        "1) FreeSWITCH service is down, "
-        "2) Calls are not running, "
-        "3) SIP registration issue, "
-        "4) No audio issue. "
-        "Then I will give exact commands."
-    )
-
+# ------------------------------------------------------------------
+# Endpoint
+# ------------------------------------------------------------------
 @app.post("/chat", response_model=ChatResponse)
 async def chat(request: ChatRequest):
     try:
@@ -199,20 +156,17 @@ async def chat(request: ChatRequest):
         cid = _get_or_create_conversation(request.conversation_id)
         _update_conversation(cid)
 
-        text = _norm(user_message)
-
-        if _is_end_user(text):
-            return ChatResponse(
-                response=_tts_friendly(
-                    "Okay. Goodbye. If the issue returns, tell me: calls down, no audio, or registration problem."
-                ),
-                conversation_id=cid
+        # Quick good‑bye detection (optional shortcut)
+        if re.search(r'\b(bye|goodbye|thank you|thanks|that is all)\b', user_message.lower()):
+            response_text = _tts_friendly(
+                "You're welcome. Goodbye. If the issue returns, just describe what's happening."
             )
+            _add_to_history(cid, "assistant", response_text)
+            return ChatResponse(response=response_text, conversation_id=cid)
 
-        intent = _detect_domain_issue(text)
-        response = _reply_for_intent(intent)
-
-        return ChatResponse(response=response, conversation_id=cid)
+        # Call LLM for real response
+        reply = _get_llm_response(cid, user_message)
+        return ChatResponse(response=reply, conversation_id=cid)
 
     except HTTPException:
         raise

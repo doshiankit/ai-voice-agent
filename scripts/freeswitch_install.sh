@@ -289,7 +289,7 @@ chown -R ${FS_USER}:${FS_GROUP} $PREFIX/share/freeswitch/scripts/
 
 # ----------------------------------------------------
 # Create symlink for fs_cli in /usr/local/bin
-i# ----------------------------------------------------
+# ----------------------------------------------------
 ln -sf $PREFIX/bin/freeswitch /usr/local/bin/freeswitch
 ln -sf $PREFIX/bin/fs_cli /usr/local/bin/fs_cli
 
