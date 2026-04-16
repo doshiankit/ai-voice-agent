@@ -55,6 +55,7 @@ When someone calls in, this system handles the entire conversation autonomously:
 - [ ] SaaS deployment (multi-tenant AI voice platform)
        
 ---
+
 ## Real-World Use Cases
 
 ### Telecom & Contact Centers
@@ -345,11 +346,43 @@ curl -X POST http://localhost:8002/synthesize \
 
 ---
 
+## 🤝 Contributions
+
+Contributions are welcome!
+
+If you have ideas to improve performance, scalability, or features, feel free to:
+
+- Open an issue for discussion  
+- Submit a pull request  
+- Suggest new use cases or integrations  
+
+---
+
+## 💬 Feedback
+
+If you find this project useful or have suggestions, feel free to share feedback via issues.
+
+---
+
+## 🚀 Future Improvements
+
+- Multi-agent orchestration (Supervisor + Agents)  
+- Emotion-aware voice responses  
+- Advanced real-time call analytics  
+- Multi-tenant SaaS deployment  
+- Voice personalization and speaker recognition  
+
+---
+
+## ⭐ Support
+
+If you found this project helpful, consider giving it a star ⭐ — it helps others discover it.
+
+---
+
 ## Author
 
 **Ankit Doshi** — 13 years VoIP/Telecom engineering  
 FreeSWITCH | SIP | AI Voice | PHP | Python | Lua
 
 [GitHub](https://github.com/doshiankit) · [LinkedIn](https://www.linkedin.com/in/ankit-doshi-b0507676/)
-
-Any further improvements needed ? 
