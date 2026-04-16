@@ -139,7 +139,6 @@ the system uses a unified Agent API.
 - **Python** — FastAPI, Uvicorn, Whisper, Piper TTS
 - **Lua** — FreeSWITCH call scripting
 - **FreeSWITCH** — SIP/RTP media server
-- **Docker + Supervisor** — containerised multi-service deployment
 - **Groq / OpenAI** — LLM backend (pluggable)
 
 ---
