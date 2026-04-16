@@ -1,7 +1,12 @@
 # AI Voice Agent
+![Status](https://img.shields.io/badge/Status-Active%20Development-green)
+![Architecture](https://img.shields.io/badge/Architecture-Microservices-blue)
+![VoIP](https://img.shields.io/badge/VoIP-FreeSWITCH-orange)
+![AI](https://img.shields.io/badge/AI-LLM%20%2B%20Voice-purple)
 
 > Production-ready AI voice agent built on FreeSWITCH — handles real phone calls end-to-end using Speech-to-Text, LLM reasoning, and Text-to-Speech.
 
+> ⚡ This project is under active development and evolving into a full AI Voice Platform (VoIP + LLM + Multi-Agent system)
 ---
 
 ## What This Does
@@ -18,6 +23,42 @@ When someone calls in, this system handles the entire conversation autonomously:
 
 ---
 
+✅ Completed : 
+ Real-time SIP call handling via FreeSWITCH
+
+ Live Speech-to-Text (Whisper)
+
+ LLM-based response generation (Groq / OpenAI)
+
+ Text-to-Speech playback (Piper TTS)
+
+ End-to-end call loop automation
+
+ CPU & GPU auto-detection
+
+ Docker-based deployment
+
+ Supervisor-based service orchestration
+
+ Call simulator for local testing
+
+---
+
+🚧 In Progress
+ Streaming STT for lower latency
+ Multi-language support
+ Context memory across calls
+ Call analytics dashboard
+
+---
+
+🔮 Planned
+ Multi-agent orchestration (Supervisor + Agents)
+ CRM integration (HubSpot / Salesforce)
+ Voice biometrics / speaker identification
+ SaaS deployment (multi-tenant AI voice platform)
+
+---
 ## Real-World Use Cases
 
 ### Telecom & Contact Centers
