@@ -23,41 +23,37 @@ When someone calls in, this system handles the entire conversation autonomously:
 
 ---
 
-✅ Completed : 
- Real-time SIP call handling via FreeSWITCH
+## Features
 
- Live Speech-to-Text (Whisper)
+### ✅ Completed
 
- LLM-based response generation (Groq / OpenAI)
-
- Text-to-Speech playback (Piper TTS)
-
- End-to-end call loop automation
-
- CPU & GPU auto-detection
-
- Docker-based deployment
-
- Supervisor-based service orchestration
-
- Call simulator for local testing
+- [x] Real-time SIP call handling via FreeSWITCH  
+- [x] Live Speech-to-Text (Whisper)  
+- [x] LLM-based response generation (Groq / OpenAI)  
+- [x] Text-to-Speech playback (Piper TTS)  
+- [x] End-to-end call loop automation  
+- [x] CPU & GPU auto-detection  
+- [x] Supervisor-based service orchestration  
+- [x] Call simulator for local testing  
 
 ---
 
-🚧 In Progress
- Streaming STT for lower latency
- Multi-language support
- Context memory across calls
- Call analytics dashboard
+### 🚧 In Progress
+- [ ] Docker-based deployment  
+- [ ] Streaming STT for lower latency  
+- [ ] Multi-language support  
+- [ ] Context memory across calls  
+- [ ] Call analytics dashboard  
 
 ---
 
-🔮 Planned
- Multi-agent orchestration (Supervisor + Agents)
- CRM integration (HubSpot / Salesforce)
- Voice biometrics / speaker identification
- SaaS deployment (multi-tenant AI voice platform)
+### 🔮 Planned
 
+- [ ] Multi-agent orchestration (Supervisor + Agents)  
+- [ ] CRM integration (HubSpot / Salesforce)  
+- [ ] Voice biometrics / speaker identification  
+- [ ] SaaS deployment (multi-tenant AI voice platform)
+       
 ---
 ## Real-World Use Cases
 
@@ -99,6 +95,30 @@ STT :8001     TTS :8002
          v    v
         LLM (Groq / OpenAI)
 ```
+---
+## Call Flow (Optimized Architecture)
+
+1. Incoming SIP call hits FreeSWITCH  
+2. FreeSWITCH records/streams caller audio  
+3. Audio is sent to a single **Agent API endpoint**  
+4. Agent Service internally processes:
+   - Speech-to-Text (Whisper)
+   - LLM response generation
+   - Text-to-Speech synthesis
+5. Final audio response is returned to FreeSWITCH  
+6. FreeSWITCH plays the response to the caller  
+
+### Why Single Endpoint Design?
+
+Instead of calling multiple services (STT → LLM → TTS) from FreeSWITCH,  
+the system uses a unified Agent API.
+
+**Advantages:**
+
+- Reduces network latency (only one external API call)  
+- Improves response time for real-time conversations  
+- Keeps FreeSWITCH logic simple and clean  
+- Enables internal optimization (GPU processing, batching, caching)  
 
 ---
 
@@ -332,3 +352,5 @@ curl -X POST http://localhost:8002/synthesize \
 FreeSWITCH | SIP | AI Voice | PHP | Python | Lua
 
 [GitHub](https://github.com/doshiankit) · [LinkedIn](https://www.linkedin.com/in/ankit-doshi-b0507676/)
+
+Any further improvements needed ? 
