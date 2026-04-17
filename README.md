@@ -23,42 +23,39 @@ When someone calls in, this system handles the entire conversation autonomously:
 
 ---
 
-✅ Completed : 
- Real-time SIP call handling via FreeSWITCH
+## Features
 
- Live Speech-to-Text (Whisper)
+### ✅ Completed
 
- LLM-based response generation (Groq / OpenAI)
-
- Text-to-Speech playback (Piper TTS)
-
- End-to-end call loop automation
-
- CPU & GPU auto-detection
-
- Docker-based deployment
-
- Supervisor-based service orchestration
-
- Call simulator for local testing
+- [x] Real-time SIP call handling via FreeSWITCH  
+- [x] Live Speech-to-Text (Whisper)  
+- [x] LLM-based response generation (Groq / OpenAI)  
+- [x] Text-to-Speech playback (Piper TTS)  
+- [x] End-to-end call loop automation  
+- [x] CPU & GPU auto-detection  
+- [x] Supervisor-based service orchestration  
+- [x] Call simulator for local testing  
 
 ---
 
-🚧 In Progress
- Streaming STT for lower latency
- Multi-language support
- Context memory across calls
- Call analytics dashboard
+### 🚧 In Progress
+- [ ] Docker-based deployment  
+- [ ] Streaming STT for lower latency  
+- [ ] Multi-language support  
+- [ ] Context memory across calls  
+- [ ] Call analytics dashboard  
 
 ---
 
-🔮 Planned
- Multi-agent orchestration (Supervisor + Agents)
- CRM integration (HubSpot / Salesforce)
- Voice biometrics / speaker identification
- SaaS deployment (multi-tenant AI voice platform)
+### 🔮 Planned
 
+- [ ] Multi-agent orchestration (Supervisor + Agents)  
+- [ ] CRM integration (HubSpot / Salesforce)  
+- [ ] Voice biometrics / speaker identification  
+- [ ] SaaS deployment (multi-tenant AI voice platform)
+       
 ---
+
 ## Real-World Use Cases
 
 ### Telecom & Contact Centers
@@ -104,6 +101,30 @@ Caller (SIP Phone / PSTN)
         v
   Audio Response → FreeSWITCH → Caller
 ```
+---
+## Call Flow (Optimized Architecture)
+
+1. Incoming SIP call hits FreeSWITCH  
+2. FreeSWITCH records/streams caller audio  
+3. Audio is sent to a single **Agent API endpoint**  
+4. Agent Service internally processes:
+   - Speech-to-Text (Whisper)
+   - LLM response generation
+   - Text-to-Speech synthesis
+5. Final audio response is returned to FreeSWITCH  
+6. FreeSWITCH plays the response to the caller  
+
+### Why Single Endpoint Design?
+
+Instead of calling multiple services (STT → LLM → TTS) from FreeSWITCH,  
+the system uses a unified Agent API.
+
+**Advantages:**
+
+- Reduces network latency (only one external API call)  
+- Improves response time for real-time conversations  
+- Keeps FreeSWITCH logic simple and clean  
+- Enables internal optimization (GPU processing, batching, caching)  
 
 ---
 
@@ -124,7 +145,6 @@ Caller (SIP Phone / PSTN)
 - **Python** — FastAPI, Uvicorn, Whisper, Piper TTS
 - **Lua** — FreeSWITCH call scripting
 - **FreeSWITCH** — SIP/RTP media server
-- **Docker + Supervisor** — containerised multi-service deployment
 - **Groq / OpenAI** — LLM backend (pluggable)
 
 ---
@@ -328,6 +348,40 @@ curl -X POST http://localhost:8002/synthesize \
 - Designed for single-server deployment
 - STT requires NumPy `2.1.2` — do not downgrade
 - FreeSWITCH ESL port `8021` should not be exposed publicly
+
+---
+
+## 🤝 Contributions
+
+Contributions are welcome!
+
+If you have ideas to improve performance, scalability, or features, feel free to:
+
+- Open an issue for discussion  
+- Submit a pull request  
+- Suggest new use cases or integrations  
+
+---
+
+## 💬 Feedback
+
+If you find this project useful or have suggestions, feel free to share feedback via issues.
+
+---
+
+## 🚀 Future Improvements
+
+- Multi-agent orchestration (Supervisor + Agents)  
+- Emotion-aware voice responses  
+- Advanced real-time call analytics  
+- Multi-tenant SaaS deployment  
+- Voice personalization and speaker recognition  
+
+---
+
+## ⭐ Support
+
+If you found this project helpful, consider giving it a star ⭐ — it helps others discover it.
 
 ---
 
