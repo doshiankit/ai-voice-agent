@@ -21,13 +21,6 @@ class Config:
     TTS_HOST = os.getenv('TTS_HOST', 'localhost')
     TTS_PORT = int(os.getenv('TTS_PORT', '8002'))
     
-    OLLAMA_HOST = os.getenv('OLLAMA_HOST', 'localhost')
-    OLLAMA_PORT = int(os.getenv('OLLAMA_PORT', '11434'))
-    
-    # For future use
-    RAG_HOST = os.getenv('RAG_HOST', 'localhost')
-    RAG_PORT = int(os.getenv('RAG_PORT', '8003'))
-    
     # Base URLs (constructed from host and port)
     @property
     def STT_BASE_URL(self):
@@ -37,15 +30,6 @@ class Config:
     def TTS_BASE_URL(self):
         return f"http://{self.TTS_HOST}:{self.TTS_PORT}"
     
-    @property
-    def OLLAMA_BASE_URL(self):
-        return f"http://{self.OLLAMA_HOST}:{self.OLLAMA_PORT}"
-    
-    @property
-    def RAG_BASE_URL(self):
-        return f"http://{self.RAG_HOST}:{self.RAG_PORT}"
-    
-    # Full service URLs (base + endpoint)
     @property
     def STT_TRANSCRIBE_URL(self):
         return f"{self.STT_BASE_URL}/transcribe"
@@ -62,13 +46,6 @@ class Config:
     def TTS_HEALTH_URL(self):
         return f"{self.TTS_BASE_URL}/health"
     
-    @property
-    def OLLAMA_GENERATE_URL(self):
-        return f"{self.OLLAMA_BASE_URL}/api/generate"
-    
-    @property
-    def RAG_QUERY_URL(self):
-        return f"{self.RAG_BASE_URL}/query"
     
     # Alias for backward compatibility (use these in simulate_call.py)
     @property
@@ -81,10 +58,6 @@ class Config:
         """Alias for TTS_SYNTHESIZE_URL"""
         return self.TTS_SYNTHESIZE_URL
     
-    @property
-    def OLLAMA_URL(self):
-        """Alias for OLLAMA_GENERATE_URL"""
-        return self.OLLAMA_GENERATE_URL
 
 
 # Create a singleton instance
@@ -102,8 +75,6 @@ def debug_config():
     print(f"TTS Service: {config.TTS_BASE_URL}")
     print(f"  - Health: {config.TTS_HEALTH_URL}")
     print(f"  - Synthesize: {config.TTS_SYNTHESIZE_URL}")
-    print(f"Ollama LLM: {config.OLLAMA_BASE_URL}")
-    print(f"  - Generate: {config.OLLAMA_GENERATE_URL}")
     print("=" * 50)
 
 

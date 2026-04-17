@@ -12,7 +12,7 @@ REPO_URL="https://github.com/doshiankit/ai-voice-agent.git"
 # -----------------------------
 echo "▶ Installing prerequisites..."
 apt update
-apt install -y python3 python3-venv python3-pip git ffmpeg sox supervisor curl wget pciutils
+apt install -y python3 python3-venv python3-pip git ffmpeg sox supervisor curl wget pciutils libsndfile1
 sudo mkdir -p /var/log/ai_agent
 sudo chown -R root:root /var/log/ai_agent
 sudo chmod 755 /var/log/ai_agent

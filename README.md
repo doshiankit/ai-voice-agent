@@ -90,14 +90,19 @@ Caller (SIP Phone / PSTN)
   FreeSWITCH (SIP + RTP)
         |
         v
-  Agent Service :8003
-   /            \
-  v              v
-STT :8001     TTS :8002
-(Whisper)    (Piper TTS)
-        \      /
-         v    v
-        LLM (Groq / OpenAI)
+  Pipeline Service :8004
+        |
+        v
+   +-------------+
+   |   Flow      |
+   |             |
+   | 1. STT      | ---> STT Service :8001 (Whisper)
+   | 2. Agent    | ---> Agent Service :8003 (LLM - Groq/OpenAI)
+   | 3. TTS      | ---> TTS Service :8002 (Piper)
+   +-------------+
+        |
+        v
+  Audio Response → FreeSWITCH → Caller
 ```
 
 ---
