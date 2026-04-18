@@ -28,6 +28,10 @@ if not GROQ_API_KEY:
 
 client = Groq(api_key=GROQ_API_KEY)
 GROQ_MODEL = os.getenv("GROQ_MODEL", "llama-3.1-8b-instant")
+SYSTEM_PROMPT = os.getenv(
+    "AGENT_SYSTEM_PROMPT",
+    "You are a helpful voice assistant. Keep responses concise and clear for phone conversations."
+)
 # ------------------------------------------------------------------
 # Data Models
 # ------------------------------------------------------------------
@@ -66,11 +70,7 @@ def _get_or_create_conversation(conversation_id: Optional[str]) -> str:
             "history": [
                 {
                     "role": "system",
-                    "content": (
-                        "You are a senior VoIP support engineer helping customers troubleshoot FreeSWITCH issues. "
-                        "Keep responses concise (max 3 sentences) and give exact command‑line steps when appropriate. "
-                        "Do not use markdown or numbered lists – plain spoken English only."
-                    )
+                    "content": SYSTEM_PROMPT
                 }
             ],
             "turns": 0
