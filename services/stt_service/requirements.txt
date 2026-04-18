@@ -2,7 +2,9 @@ fastapi==0.104.1
 uvicorn[standard]==0.24.0
 python-multipart==0.0.6
 setuptools==68.2.2
-
+soundfile==0.13.1
+scipy==1.15.3
+faster-whisper==1.0.3
 # Core dependencies
 numpy==1.26.4
 tiktoken==0.12.0
@@ -11,3 +13,4 @@ requests>=2.26.0
 tqdm>=4.62.0
 numba==0.59.1
 llvmlite==0.42.0
+python-dotenv=1.2.2

@@ -1,80 +1,37 @@
 # AI Voice Agent
+
 ![Status](https://img.shields.io/badge/Status-Active%20Development-green)
 ![Architecture](https://img.shields.io/badge/Architecture-Microservices-blue)
 ![VoIP](https://img.shields.io/badge/VoIP-FreeSWITCH-orange)
 ![AI](https://img.shields.io/badge/AI-LLM%20%2B%20Voice-purple)
 
-> Production-ready AI voice agent built on FreeSWITCH — handles real phone calls end-to-end using Speech-to-Text, LLM reasoning, and Text-to-Speech.
+> Real-time AI voice agent for live SIP phone calls — Speech-to-Text → LLM → Text-to-Speech, end-to-end on a single CPU server.
 
-> ⚡ This project is under active development and evolving into a full AI Voice Platform (VoIP + LLM + Multi-Agent system)
+---
+
+## Measured Performance
+
+| Step | Latency |
+|---|---|
+| Speech-to-Text (Whisper base) | ~0.6s |
+| LLM response (Groq) | ~0.2s |
+| Text-to-Speech (Piper) | ~0.2s |
+| **End-to-end total** | **~1.5s on CPU** |
+
+No GPU required. Tested on Hetzner CX32 (4 vCPU, 8GB RAM).
+
 ---
 
 ## What This Does
 
-When someone calls in, this system handles the entire conversation autonomously:
+A caller speaks on a real SIP phone call. This system:
 
-1. **FreeSWITCH** receives the SIP call and streams raw audio
-2. **STT Service** (OpenAI Whisper) converts live speech to text in real time
-3. **Agent Service** sends the transcript to an LLM for context-aware, intelligent response generation
-4. **TTS Service** (Piper TTS) converts the LLM response back into natural speech
-5. **FreeSWITCH** plays the audio back to the caller — completing the loop
-
-**End-to-end latency:** ~1.5–2 seconds on CPU | ~800ms on GPU
-
----
-
-## Features
-
-### ✅ Completed
-
-- [x] Real-time SIP call handling via FreeSWITCH  
-- [x] Live Speech-to-Text (Whisper)  
-- [x] LLM-based response generation (Groq / OpenAI)  
-- [x] Text-to-Speech playback (Piper TTS)  
-- [x] End-to-end call loop automation  
-- [x] CPU & GPU auto-detection  
-- [x] Supervisor-based service orchestration  
-- [x] Call simulator for local testing  
-
----
-
-### 🚧 In Progress
-- [ ] Docker-based deployment  
-- [ ] Streaming STT for lower latency  
-- [ ] Multi-language support  
-- [ ] Context memory across calls  
-- [ ] Call analytics dashboard  
-
----
-
-### 🔮 Planned
-
-- [ ] Multi-agent orchestration (Supervisor + Agents)  
-- [ ] CRM integration (HubSpot / Salesforce)  
-- [ ] Voice biometrics / speaker identification  
-- [ ] SaaS deployment (multi-tenant AI voice platform)
-       
----
-
-## Real-World Use Cases
-
-### Telecom & Contact Centers
-Replace legacy IVR systems with an AI agent that understands natural language — no more "press 1 for billing". Handles inbound support calls, account queries, and call routing without a human agent in the loop.
-
-### Outbound Calling Campaigns
-Automate outbound calls for appointment reminders, payment follow-ups, and customer surveys. The agent handles natural responses, objections, and can escalate to a live agent when needed.
-
-### Hotel & Hospitality Automation
-Front desk bot for handling room bookings, check-in queries, restaurant reservations, and local recommendations — available 24/7 without staffing costs.
-
-### Healthcare Appointment Management
-Automate appointment booking, rescheduling, and patient reminders. The agent can handle FAQs, collect basic intake information, and transfer complex cases to staff.
-
-### Financial Services & Banking
-Handle balance enquiries, transaction alerts, EMI reminders, and basic account support calls — integrated with your existing telephony infrastructure via SIP.
-
-### Real Estate Lead Qualification
-Automatically call and qualify inbound leads, ask discovery questions, schedule site visits, and log outcomes — before a human agent ever picks up the phone.
+1. **FreeSWITCH** receives the SIP call and captures caller audio
+2. **Pipeline Service** orchestrates the full flow in one request
+3. **STT Service** transcribes the audio using faster-whisper
+4. **Agent Service** sends the transcript to Groq LLM and returns a response
+5. **TTS Service** converts the LLM response to speech using Piper TTS
+6. **FreeSWITCH** plays the audio back to the caller
 
 ---
 
@@ -84,47 +41,24 @@ Automatically call and qualify inbound leads, ask discovery questions, schedule 
 Caller (SIP Phone / PSTN)
         |
         v
-  FreeSWITCH (SIP + RTP)
+  FreeSWITCH (port 5060 SIP, 16384-16400 RTP)
         |
         v
-  Pipeline Service :8004
+  Pipeline Service :8004  ← single entry point from FreeSWITCH
         |
-        v
-   +-------------+
-   |   Flow      |
-   |             |
-   | 1. STT      | ---> STT Service :8001 (Whisper)
-   | 2. Agent    | ---> Agent Service :8003 (LLM - Groq/OpenAI)
-   | 3. TTS      | ---> TTS Service :8002 (Piper)
-   +-------------+
+        |---> STT Service :8001  (faster-whisper, CPU int8)
+        |---> Agent Service :8003 (Groq LLM)
+        |---> TTS Service :8002  (Piper TTS)
         |
         v
   Audio Response → FreeSWITCH → Caller
 ```
----
-## Call Flow (Optimized Architecture)
 
-1. Incoming SIP call hits FreeSWITCH  
-2. FreeSWITCH records/streams caller audio  
-3. Audio is sent to a single **Agent API endpoint**  
-4. Agent Service internally processes:
-   - Speech-to-Text (Whisper)
-   - LLM response generation
-   - Text-to-Speech synthesis
-5. Final audio response is returned to FreeSWITCH  
-6. FreeSWITCH plays the response to the caller  
+### Why Pipeline Service?
 
-### Why Single Endpoint Design?
-
-Instead of calling multiple services (STT → LLM → TTS) from FreeSWITCH,  
-the system uses a unified Agent API.
-
-**Advantages:**
-
-- Reduces network latency (only one external API call)  
-- Improves response time for real-time conversations  
-- Keeps FreeSWITCH logic simple and clean  
-- Enables internal optimization (GPU processing, batching, caching)  
+FreeSWITCH makes one HTTP call to Pipeline Service which internally
+calls STT → Agent → TTS in sequence. This keeps FreeSWITCH logic
+simple and all AI processing in one place.
 
 ---
 
@@ -132,20 +66,66 @@ the system uses a unified Agent API.
 
 | Service | Port | Technology | Description |
 |---|---|---|---|
-| FreeSWITCH | 5060 (SIP), 16384–16400 (RTP) | FreeSWITCH | SIP registration, call routing, media handling, ESL |
-| STT Service | 8001 | OpenAI Whisper | Real-time speech-to-text. Auto-detects CPU or GPU. |
-| TTS Service | 8002 | Piper TTS | Converts LLM text response to audio |
-| Agent Service | 8003 | FastAPI + LLM | Core call logic — connects STT, LLM, TTS, and FreeSWITCH |
-| Simulator Service | — | Custom | Call simulator for local testing without a real SIP endpoint |
+| FreeSWITCH | 5060 (SIP), 16384-16400 (RTP) | FreeSWITCH | SIP registration, call routing, ESL |
+| Pipeline Service | 8004 | FastAPI | Orchestrates STT → Agent → TTS in one call |
+| STT Service | 8001 | faster-whisper (CPU int8) | Converts caller speech to text |
+| Agent Service | 8003 | FastAPI + Groq LLM | Generates intelligent response |
+| TTS Service | 8002 | Piper TTS | Converts response text to audio |
+| Simulator Service | — | Custom | Test calls without real SIP endpoint |
 
 ---
 
-## Tech Stack
+## Features
 
-- **Python** — FastAPI, Uvicorn, Whisper, Piper TTS
-- **Lua** — FreeSWITCH call scripting
-- **FreeSWITCH** — SIP/RTP media server
-- **Groq / OpenAI** — LLM backend (pluggable)
+### Completed
+- [x] Real-time SIP call handling via FreeSWITCH
+- [x] Speech-to-Text using faster-whisper (CPU int8 optimised)
+- [x] LLM response generation via Groq API (pluggable)
+- [x] Text-to-Speech using Piper TTS
+- [x] Single pipeline endpoint — one HTTP call from FreeSWITCH
+- [x] Conversation memory within a call session
+- [x] CPU and GPU auto-detection
+- [x] Supervisor-based service orchestration
+- [x] Docker support
+- [x] Call simulator for local testing
+
+### In Progress
+- [ ] Streaming STT for lower latency
+- [ ] Multi-language support
+- [ ] Call analytics dashboard
+
+### Planned
+- [ ] Multi-agent orchestration
+- [ ] CRM integration (HubSpot / Salesforce)
+- [ ] Voice biometrics / speaker identification
+- [ ] Multi-tenant SaaS deployment
+
+---
+
+## Real-World Use Cases
+
+### Contact Center IVR Replacement
+Replace legacy IVR with an AI agent that understands natural language.
+Handles inbound support, account queries, and routing without human agents.
+
+### Outbound Calling Campaigns
+Automate appointment reminders, payment follow-ups, and surveys.
+Handles natural responses and escalates to live agents when needed.
+
+### Hotel & Hospitality
+Front desk bot for room bookings, check-in queries, and recommendations.
+Available 24/7 without staffing costs.
+
+### Healthcare Appointment Management
+Automate booking, rescheduling, and patient reminders.
+Handles FAQs and transfers complex cases to staff.
+
+### Financial Services
+Balance enquiries, transaction alerts, EMI reminders via SIP.
+
+### Real Estate Lead Qualification
+Automatically call and qualify inbound leads, ask discovery questions,
+schedule site visits, and log outcomes before a human agent picks up.
 
 ---
 
@@ -153,33 +133,30 @@ the system uses a unified Agent API.
 
 - Ubuntu 22.04 LTS
 - Root access
-- Public IP (recommended for SIP registration)
+- Public IP (required for SIP registration)
 - Python 3.10+
 
 ---
 
 ## Required Open Ports
 
-| Port Range | Protocol | Service |
+| Port | Protocol | Service |
 |---|---|---|
-| 5060 | UDP/TCP | FreeSWITCH SIP (Signaling) |
-| 16384–16400 | UDP | RTP (Media) |
-| 8001 | TCP | STT Service |
-| 8002 | TCP | TTS Service |
-| 8003 | TCP | Agent Service |
-| 8021 | TCP | FreeSWITCH ESL (Internal only) |
+| 5060 | UDP/TCP | FreeSWITCH SIP |
+| 16384-16400 | UDP | RTP Media |
+| 8001-8004 | TCP | AI Services |
+| 8021 | TCP | FreeSWITCH ESL (internal only — do not expose publicly) |
 
 ---
 
 ## Installation
 
 ```bash
-cd /root
 git clone https://github.com/doshiankit/ai-voice-agent.git
 cd ai-voice-agent
 
 cp .env.example .env
-# Edit .env and add your API keys
+nano .env  # add your GROQ_API_KEY
 
 chmod +x scripts/install.sh scripts/freeswitch_install.sh
 ./scripts/install.sh
@@ -189,48 +166,36 @@ chmod +x scripts/install.sh scripts/freeswitch_install.sh
 
 ## Environment Variables
 
-Copy `.env.example` to `.env` and fill in your values:
-
-```bash
-cp .env.example .env
-```
-
-| Variable | Required | Description |
-|---|---|---|
-| `GROQ_API_KEY` | Yes (or OpenAI) | LLM backend — get free key at console.groq.com |
-| `OPENAI_API_KEY` | Optional | Alternative LLM backend |
-| `ESL_HOST` | Yes | FreeSWITCH ESL host (default: 127.0.0.1) |
-| `ESL_PORT` | Yes | FreeSWITCH ESL port (default: 8021) |
-| `ESL_PASSWORD` | Yes | FreeSWITCH ESL password (default: ClueCon) |
-| `WHISPER_MODEL` | Yes | Model size: tiny / base / small / medium |
-
----
-
-## What the Installer Does
-
-The `install.sh` script fully automates setup:
-
-- Installs system packages (build-essential, Python3, pip, ffmpeg, etc.)
-- Installs FreeSWITCH with required modules
-- Creates isolated Python virtual environments per service
-- Auto-detects CPU or GPU — installs appropriate PyTorch version
-- Pins NumPy to `2.1.2` for compatibility
-- Configures Supervisor to manage all services
-- Starts all services automatically on completion
+| Variable | Required | Default | Description |
+|---|---|---|---|
+| `GROQ_API_KEY` | Yes | — | Get free key at console.groq.com |
+| `GROQ_MODEL` | No | llama-3.1-8b-instant | Groq model name |
+| `WHISPER_MODEL` | No | base | tiny / base / small / medium |
+| `ESL_HOST` | No | 127.0.0.1 | FreeSWITCH ESL host |
+| `ESL_PORT` | No | 8021 | FreeSWITCH ESL port |
+| `ESL_PASSWORD` | No | ClueCon | FreeSWITCH ESL password |
+| `STT_URL` | No | http://127.0.0.1:8001 | STT service URL |
+| `AGENT_URL` | No | http://127.0.0.1:8003 | Agent service URL |
+| `TTS_URL` | No | http://127.0.0.1:8002 | TTS service URL |
+| `MAX_UPLOAD_MB` | No | 25 | Max audio upload size in MB |
 
 ---
 
 ## Verify Installation
 
 ```bash
-# Check all services are running
 supervisorctl status
-
 # Expected output:
 # agent_service      RUNNING
+# pipeline_service   RUNNING
 # stt_service        RUNNING
 # tts_service        RUNNING
-# simulator_service  RUNNING
+
+# Health checks
+curl http://localhost:8001/health
+curl http://localhost:8002/health
+curl http://localhost:8003/health
+curl http://localhost:8004/health
 ```
 
 ---
@@ -247,20 +212,39 @@ supervisorctl stop all
 # Restart a single service
 supervisorctl restart agent_service
 
-# View live logs
-tail -f /var/log/supervisor/agent_service.log
+# Live logs
+tail -f /var/log/ai_agent/pipeline_service.err.log
+tail -f /var/log/ai_agent/agent_service.out.log
+tail -f /var/log/ai_agent/stt_service.err.log
+tail -f /var/log/ai_agent/tts_service.err.log
 ```
 
 ---
 
-## Vast.ai Configuration
+## Testing
 
-When deploying on Vast.ai GPU instances, open the following ports:
+```bash
+# Test full pipeline end-to-end (most important test)
+curl -X POST http://localhost:8004/pipeline \
+  -F "audio=@test_data/demo_audio.wav" \
+  -F "session_id=test123" \
+  -F "caller_id=1000" \
+  -o response.wav \
+  -w "Status: %{http_code} | Time: %{time_total}s\n"
 
-```
-5060 UDP/TCP
-16384-16400 UDP
-8001-8003 TCP
+# Test STT service only
+curl -X POST http://localhost:8001/transcribe \
+  -F "file=@test_data/demo_audio.wav" \
+  -F "session_id=test123"
+
+# Test Agent service only
+curl -X POST http://localhost:8003/chat \
+  -H "Content-Type: application/json" \
+  -d '{"text": "How do I restart FreeSWITCH?", "conversation_id": "test123"}'
+
+# Test TTS service only
+curl -X POST "http://localhost:8002/synthesize?text=Hello+this+is+a+test" \
+  -o test_output.wav
 ```
 
 ---
@@ -270,42 +254,20 @@ When deploying on Vast.ai GPU instances, open the following ports:
 ```
 ai-voice-agent/
 ├── services/
-│   ├── stt_service/         # Whisper speech-to-text
+│   ├── stt_service/         # faster-whisper speech-to-text
 │   ├── tts_service/         # Piper text-to-speech
-│   ├── agent_service/       # LLM call logic (core)
+│   ├── agent_service/       # Groq LLM response generation
+│   ├── pipeline_service/    # Orchestrates STT → Agent → TTS
 │   └── simulator_service/   # Call simulator for testing
-├── freeswitch/              # FreeSWITCH dialplan + config + Lua scripts
+├── freeswitch/              # FreeSWITCH dialplan, config, Lua scripts
 ├── scripts/
-│   ├── install.sh           # Main installer
-│   ├── freeswitch_install.sh
-│   ├── start_all.sh
-│   └── start_supervisor.sh
-├── config/                  # Service configuration files
-├── supervisor/              # Supervisor process configs
+│   ├── install.sh           # Main installer (handles CPU/GPU detection)
+│   └── freeswitch_install.sh
+├── supervisor/              # Supervisor process configs per service
 ├── docker-compose.yml       # Docker orchestration
-├── requirements.txt         # Python dependencies
 ├── .env.example             # Environment variable template
 └── test_config.py           # Installation verification script
 ```
-
----
-
-## Python Dependencies
-
-Key packages pinned in `requirements.txt`:
-
-| Package | Version | Purpose |
-|---|---|---|
-| fastapi | 0.104.1 | Service API framework |
-| uvicorn | 0.24.0 | ASGI server |
-| openai-whisper | 20231117 | Speech-to-text |
-| torch | 2.2.1 | ML runtime for Whisper |
-| torchaudio | 2.2.1 | Audio processing |
-| numpy | 2.1.2 | Numerical computing |
-| pydantic | 2.12.5 | Data validation |
-| tiktoken | 0.12.0 | Token counting |
-
-> **Note:** Virtual environments are not committed to git. They are created by `install.sh` per service.
 
 ---
 
@@ -319,75 +281,43 @@ docker-compose up --build
 docker-compose up -d
 
 # View logs
-docker-compose logs -f agent_service
+docker-compose logs -f pipeline_service
 ```
 
 ---
 
-## Testing
+## Tech Stack
 
-```bash
-# Verify configuration and environment
-python test_config.py
-
-# Test STT service directly
-curl -X POST http://localhost:8001/transcribe \
-  -F "audio=@test_audio.wav"
-
-# Test TTS service directly
-curl -X POST http://localhost:8002/synthesize \
-  -H "Content-Type: application/json" \
-  -d '{"text": "Hello, how can I help you today?"}'
-```
+- **Python** — FastAPI, Uvicorn, faster-whisper, Piper TTS
+- **Lua** — FreeSWITCH call scripting
+- **FreeSWITCH** — SIP/RTP media server
+- **Groq** — LLM backend (OpenAI-compatible, pluggable)
 
 ---
 
 ## Notes
 
 - CPU and GPU modes are handled automatically by the installer
-- Designed for single-server deployment
-- STT requires NumPy `2.1.2` — do not downgrade
-- FreeSWITCH ESL port `8021` should not be exposed publicly
+- Designed for single-server deployment — all services run on localhost
+- STT requires NumPy 1.26.x — do not upgrade to 2.x
+- FreeSWITCH ESL port 8021 must not be exposed publicly
+- Ports 8001-8004 are internal services — expose only what your dialplan needs
 
 ---
 
-## 🤝 Contributions
+## Contributing
 
-Contributions are welcome!
-
-If you have ideas to improve performance, scalability, or features, feel free to:
-
-- Open an issue for discussion  
-- Submit a pull request  
-- Suggest new use cases or integrations  
-
----
-
-## 💬 Feedback
-
-If you find this project useful or have suggestions, feel free to share feedback via issues.
-
----
-
-## 🚀 Future Improvements
-
-- Multi-agent orchestration (Supervisor + Agents)  
-- Emotion-aware voice responses  
-- Advanced real-time call analytics  
-- Multi-tenant SaaS deployment  
-- Voice personalization and speaker recognition  
-
----
-
-## ⭐ Support
-
-If you found this project helpful, consider giving it a star ⭐ — it helps others discover it.
+Contributions welcome. Open an issue for discussion or submit a pull request.
 
 ---
 
 ## Author
 
-**Ankit Doshi** — 13 years VoIP/Telecom engineering  
-FreeSWITCH | SIP | AI Voice | PHP | Python | Lua
+**Ankit Doshi** — 13 years VoIP/Telecom engineering
+FreeSWITCH | SIP | AI Voice | Python | Lua | PHP
 
 [GitHub](https://github.com/doshiankit) · [LinkedIn](https://www.linkedin.com/in/ankit-doshi-b0507676/)
+
+---
+
+⭐ If you found this project useful, a star helps others discover it.

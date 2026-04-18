@@ -5,7 +5,9 @@ setuptools==68.2.2
 # CPU torch
 torch==2.2.1
 torchaudio==2.2.1
-
+soundfile==0.13.1
+scipy==1.15.3
+faster-whisper==1.0.3
 # Whisper
 #openai-whisper==20231117
 
@@ -19,3 +21,4 @@ requests>=2.26.0
 tqdm>=4.62.0
 numba==0.59.1
 llvmlite==0.42.0
+python-dotenv=1.2.2

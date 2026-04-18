@@ -2,7 +2,10 @@ fastapi==0.104.1
 uvicorn[standard]==0.24.0
 python-multipart==0.0.6
 setuptools==68.2.2
-
+soundfile==0.13.1
+scipy==1.15.3
+faster-whisper==1.0.3
+python-dotenv=1.2.2
 # GPU torch (CUDA will be pulled)
 torch==2.2.1
 torchaudio==2.2.1

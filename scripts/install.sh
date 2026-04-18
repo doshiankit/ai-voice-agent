@@ -75,6 +75,7 @@ declare -A VENV_MAP=(
   ["tts_service"]="tts_venv"
   ["agent_service"]="agent_venv"
   ["simulator_service"]="simulator_venv"
+  ["pipeline_service"]="pipeline_venv"
 )
 
 for SERVICE in "${!VENV_MAP[@]}"; do
@@ -102,12 +103,12 @@ if [ "$SERVICE" = "stt_service" ]; then
             --extra-index-url https://download.pytorch.org/whl/cpu \
             -r requirements.cpu.txt
     # Install faster-whisper (CPU version will use CPU inference)
-    pip install faster-whisper
+    pip install faster-whisper==1.0.3
   else
     echo "    ▶ Installing STT GPU requirements..."
     pip install -r requirements.gpu.txt
     # Install faster-whisper (GPU version will use CUDA automatically)
-    pip install faster-whisper
+    pip install faster-whisper==1.0.3
   fi
 else
   echo "    ▶ Installing standard requirements..."

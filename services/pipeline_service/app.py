@@ -12,6 +12,8 @@ import time
 import httpx
 from fastapi import FastAPI, File, Form, UploadFile, HTTPException
 from fastapi.responses import FileResponse, JSONResponse
+from dotenv import load_dotenv
+load_dotenv("/root/ai-voice-agent/.env")
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [pipeline] %(message)s")
 log = logging.getLogger(__name__)
@@ -66,7 +68,7 @@ async def pipeline(
     t1 = time.perf_counter()
     stt_resp = await _client.post(
         f"{STT_URL}/transcribe",
-        files={"audio": (audio.filename, audio_bytes, audio.content_type or "audio/wav")},
+        files={"file": (audio.filename, audio_bytes, audio.content_type or "audio/wav")},
         data={"session_id": session_id},
     )
     if stt_resp.status_code != 200:
@@ -83,8 +85,8 @@ async def pipeline(
     # ── Step 2: Agent ──────────────────────────────────────────────────────────
     t2 = time.perf_counter()
     agent_resp = await _client.post(
-        f"{AGENT_URL}/respond",
-        json={"text": transcript, "session_id": session_id, "caller_id": caller_id},
+        f"{AGENT_URL}/chat",
+        json={"text": transcript, "conversation_id": session_id},
     )
     if agent_resp.status_code != 200:
         log.error("Agent failed: %s", agent_resp.text)
@@ -97,7 +99,7 @@ async def pipeline(
     t3 = time.perf_counter()
     tts_resp = await _client.post(
         f"{TTS_URL}/synthesize",
-        json={"text": reply_text, "session_id": session_id},
+        params={"text": reply_text, "session_id": session_id},
     )
     if tts_resp.status_code != 200:
         log.error("TTS failed: %s", tts_resp.text)

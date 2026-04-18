@@ -3,6 +3,9 @@
 AI Agent Service - VoIP/FreeSWITCH Support Agent (TTS‑optimised)
 Uses Groq LLM for intelligent, contextual responses.
 """
+from dotenv import load_dotenv
+load_dotenv("/root/ai-voice-agent/.env")
+
 import os
 import time
 import uuid
@@ -19,12 +22,12 @@ app = FastAPI(title="AI Agent Service", version="2.2.0")
 # Groq Setup
 # ------------------------------------------------------------------
 GROQ_API_KEY = os.environ.get("GROQ_API_KEY")
+print(f"[DEBUG] GROQ_API_KEY loaded: {GROQ_API_KEY[:8]}...{GROQ_API_KEY[-4:] if GROQ_API_KEY else 'NONE'}", flush=True)
 if not GROQ_API_KEY:
     raise RuntimeError("GROQ_API_KEY environment variable is not set")
 
 client = Groq(api_key=GROQ_API_KEY)
-GROQ_MODEL = "llama3-8b-8192"   # Fast and free tier friendly
-
+GROQ_MODEL = os.getenv("GROQ_MODEL", "llama-3.1-8b-instant")
 # ------------------------------------------------------------------
 # Data Models
 # ------------------------------------------------------------------
@@ -138,6 +141,7 @@ def _get_llm_response(cid: str, user_text: str) -> str:
         return _tts_friendly(reply)
 
     except Exception as e:
+        print(f"[GROQ ERROR] {type(e).__name__}: {str(e)}", flush=True)
         # Fallback in case of API error
         fallback = "I'm having trouble reaching the language model right now. Please try again in a moment."
         _add_to_history(cid, "assistant", fallback)
@@ -165,7 +169,9 @@ async def chat(request: ChatRequest):
             return ChatResponse(response=response_text, conversation_id=cid)
 
         # Call LLM for real response
+        t0 = time.time()
         reply = _get_llm_response(cid, user_message)
+        print(f"[LATENCY] LLM: {time.time()-t0:.2f}s", flush=True)
         return ChatResponse(response=reply, conversation_id=cid)
 
     except HTTPException:

@@ -9,6 +9,8 @@ import threading
 import struct
 import numpy as np
 import piper
+from dotenv import load_dotenv
+load_dotenv("/root/ai-voice-agent/.env")
 
 APP_NAME = "tts-service"
 DEFAULT_VOICE = os.getenv("VOICE_PATH", "app/voices/en_US-amy-medium.onnx")

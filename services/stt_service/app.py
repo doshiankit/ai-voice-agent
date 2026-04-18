@@ -11,6 +11,8 @@ import numpy as np
 import soundfile as sf
 from scipy.signal import resample_poly
 from math import gcd
+from dotenv import load_dotenv
+load_dotenv("/root/ai-voice-agent/.env")
 
 os.environ["PATH"] = "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:" + os.environ.get("PATH", "")
 
@@ -139,7 +141,7 @@ async def transcribe_audio(
             initial_prompt=prompt,
             vad_filter=True,
             vad_parameters=dict(min_silence_duration_ms=300,speech_pad_ms=200),
-            condition_on_previous_text=False
+            condition_on_previous_text=False,
             word_timestamps=False
         )
 
