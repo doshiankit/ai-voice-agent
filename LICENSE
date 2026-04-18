@@ -1,0 +1,93 @@
+Copyright (c) 2026 Ankit Doshi. All rights reserved.
+
+AI VOICE AGENT — SOURCE AVAILABLE LICENSE
+
+================================================================================
+DEFINITIONS
+================================================================================
+
+"Software" means the AI Voice Agent source code, configuration files,
+documentation, scripts, and all associated files in this repository.
+
+"Author" means Ankit Doshi (ankitdoshi2011@gmail.com).
+
+"Personal Use" means use by an individual for private, non-commercial,
+educational, or evaluation purposes only.
+
+"Commercial Use" means any use of the Software, in whole or in part,
+for direct or indirect commercial advantage or monetary compensation,
+including but not limited to:
+  - Integrating the Software into a product or service offered to customers
+  - Using the Software to generate revenue or reduce costs in a business
+  - Offering the Software or a derivative as a hosted or SaaS product
+  - Reselling, sublicensing, or distributing the Software to third parties
+
+================================================================================
+PERMISSIONS
+================================================================================
+
+You ARE permitted to:
+
+  1. View and study the source code for personal learning and evaluation
+  2. Fork the repository for personal, non-commercial experimentation
+  3. Use the Software on your own infrastructure for personal projects
+     that generate no revenue
+  4. Reference the architecture or concepts in your own original work,
+     provided you do not copy substantial portions of the code
+
+================================================================================
+RESTRICTIONS
+================================================================================
+
+You are NOT permitted to, without prior written permission from the Author:
+
+  1. Use the Software or any derivative for any Commercial Use
+  2. Integrate the Software into any product, platform, or service —
+     whether free or paid — that is made available to third parties
+  3. Deploy the Software as part of a SaaS, PaaS, or hosted offering
+  4. Remove or alter this license, copyright notice, or attribution
+  5. Redistribute the Software or any substantial portion of it
+  6. Use the Author's name, likeness, or brand to promote any product
+     built with or derived from this Software without written consent
+
+================================================================================
+COMMERCIAL LICENSING
+================================================================================
+
+If you wish to use this Software for Commercial Use, integration into
+a product, or any purpose not permitted above, you must obtain a
+separate commercial license from the Author.
+
+For commercial licensing enquiries, contact:
+
+  Ankit Doshi
+  Email  : ankitdoshi2011@gmail.com
+  GitHub : https://github.com/doshiankit
+  LinkedIn : https://www.linkedin.com/in/ankit-doshi-b0507676/
+
+Commercial licenses are available and negotiated individually based
+on use case and scope.
+
+================================================================================
+DISCLAIMER
+================================================================================
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE, AND NON-INFRINGEMENT.
+
+IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY CLAIM, DAMAGES, OR OTHER
+LIABILITY ARISING FROM USE OF THE SOFTWARE.
+
+================================================================================
+ATTRIBUTION
+================================================================================
+
+Any permitted use of this Software must retain this copyright notice
+and the following attribution in documentation or user-facing materials:
+
+  "AI Voice Agent by Ankit Doshi — github.com/doshiankit"
+
+================================================================================
+
+This license was last updated: April 2026
