@@ -82,4 +82,4 @@ temp/
 *_venv/
 services/tts_service/app/voices/
 .venv
-!freeswitch/sounds/*.wav
+!freeswitch/sounds/**/*.wav
