@@ -99,7 +99,7 @@ async def pipeline(
     t3 = time.perf_counter()
     tts_resp = await _client.post(
         f"{TTS_URL}/synthesize",
-        params={"text": reply_text, "session_id": session_id},
+        params={"text": reply_text, "format": "wav", "sample_rate": 8000, "noise_scale": 0.0, "noise_w": 0.3}
     )
     if tts_resp.status_code != 200:
         log.error("TTS failed: %s", tts_resp.text)
