@@ -55,6 +55,7 @@ When someone calls in, this system handles the entire conversation autonomously:
 - [ ] SaaS deployment (multi-tenant AI voice platform)
        
 ---
+
 ## Real-World Use Cases
 
 ### Telecom & Contact Centers
@@ -144,7 +145,6 @@ the system uses a unified Agent API.
 - **Python** — FastAPI, Uvicorn, Whisper, Piper TTS
 - **Lua** — FreeSWITCH call scripting
 - **FreeSWITCH** — SIP/RTP media server
-- **Docker + Supervisor** — containerised multi-service deployment
 - **Groq / OpenAI** — LLM backend (pluggable)
 
 ---
@@ -167,6 +167,7 @@ the system uses a unified Agent API.
 | 8001 | TCP | STT Service |
 | 8002 | TCP | TTS Service |
 | 8003 | TCP | Agent Service |
+| 8004 | TCP | Pipeline Service |
 | 8021 | TCP | FreeSWITCH ESL (Internal only) |
 
 ---
@@ -231,6 +232,7 @@ supervisorctl status
 # stt_service        RUNNING
 # tts_service        RUNNING
 # simulator_service  RUNNING
+# pipeline_service   RUNNING
 ```
 
 ---
@@ -272,18 +274,23 @@ ai-voice-agent/
 ├── services/
 │   ├── stt_service/         # Whisper speech-to-text
 │   ├── tts_service/         # Piper text-to-speech
-│   ├── agent_service/       # LLM call logic (core)
+│   ├── agent_service/       # LLM call logic
+│   ├── pipeline_service/    # Orchestrates STT → Agent → TTS
 │   └── simulator_service/   # Call simulator for testing
+│
 ├── freeswitch/              # FreeSWITCH dialplan + config + Lua scripts
+│
 ├── scripts/
 │   ├── install.sh           # Main installer
 │   ├── freeswitch_install.sh
 │   ├── start_all.sh
 │   └── start_supervisor.sh
+│
 ├── config/                  # Service configuration files
 ├── supervisor/              # Supervisor process configs
+│
 ├── docker-compose.yml       # Docker orchestration
-├── requirements.txt         # Python dependencies
+├── requirements.txt         # Base Python dependencies
 ├── .env.example             # Environment variable template
 └── test_config.py           # Installation verification script
 ```
@@ -351,11 +358,43 @@ curl -X POST http://localhost:8002/synthesize \
 
 ---
 
+## 🤝 Contributions
+
+Contributions are welcome!
+
+If you have ideas to improve performance, scalability, or features, feel free to:
+
+- Open an issue for discussion  
+- Submit a pull request  
+- Suggest new use cases or integrations  
+
+---
+
+## 💬 Feedback
+
+If you find this project useful or have suggestions, feel free to share feedback via issues.
+
+---
+
+## 🚀 Future Improvements
+
+- Multi-agent orchestration (Supervisor + Agents)  
+- Emotion-aware voice responses  
+- Advanced real-time call analytics  
+- Multi-tenant SaaS deployment  
+- Voice personalization and speaker recognition  
+
+---
+
+## ⭐ Support
+
+If you found this project helpful, consider giving it a star ⭐ — it helps others discover it.
+
+---
+
 ## Author
 
 **Ankit Doshi** — 13 years VoIP/Telecom engineering  
 FreeSWITCH | SIP | AI Voice | PHP | Python | Lua
 
 [GitHub](https://github.com/doshiankit) · [LinkedIn](https://www.linkedin.com/in/ankit-doshi-b0507676/)
-
-Any further improvements needed ? 

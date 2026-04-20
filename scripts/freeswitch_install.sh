@@ -288,6 +288,20 @@ cp -r ${SCRIPT_DIR}/. $PREFIX/share/freeswitch/scripts/
 chown -R ${FS_USER}:${FS_GROUP} $PREFIX/share/freeswitch/scripts/
 
 # ----------------------------------------------------
+# Deploy Voicebot Sounds
+# ----------------------------------------------------
+echo "▶ Deploying Voicebot Sounds..."
+FS_SOUNDS_DIR="$PREFIX/sounds/voicebot"
+SOUNDS_SRC="$FREESWITCH_DIR/sounds/voicebot"
+
+mkdir -p "$FS_SOUNDS_DIR"
+
+if [ -d "$SOUNDS_SRC" ] && [ "$(ls -A $SOUNDS_SRC/*.wav 2>/dev/null)" ]; then
+    cp "$SOUNDS_SRC"/*.wav "$FS_SOUNDS_DIR/"
+    chown -R ${FS_USER}:${FS_GROUP} "$FS_SOUNDS_DIR"
+    echo "✅ Voicebot sounds copied to $FS_SOUNDS_DIR"
+fi
+# ----------------------------------------------------
 # Create symlink for fs_cli in /usr/local/bin
 # ----------------------------------------------------
 ln -sf $PREFIX/bin/freeswitch /usr/local/bin/freeswitch
