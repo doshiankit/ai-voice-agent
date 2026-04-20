@@ -38,15 +38,6 @@ local function lower(s)
   return string.lower(tostring(s or ""))
 end
 
-local function should_end(text)
-  local t = lower(text)
-  return t:find("bye", 1, true)
-      or t:find("goodbye", 1, true)
-      or t:find("thank you", 1, true)
-      or t:find("thanks", 1, true)
-      or t:find("stop", 1, true)
-end
-
 -- ── Load .env ─────────────────────────────────────────────────
 local function load_env(filepath)
   local file = io.open(filepath, "r")
@@ -90,7 +81,7 @@ end
 local PIPELINE_URL    = get_env("VOICEBOT_PIPELINE_URL", "http://127.0.0.1:8004/pipeline")
 local PIPELINE_TIMEOUT = tonumber(get_env("VOICEBOT_PIPELINE_TIMEOUT", "30"))
 local RECORD_MAX_SECS = tonumber(get_env("VOICEBOT_RECORD_MAX_SECS", "6"))
-local RECORD_SIL_MS   = tonumber(get_env("VOICEBOT_RECORD_SIL_MS", "1000"))
+local RECORD_SIL_THR   = tonumber(get_env("VOICEBOT_RECORD_SIL_MS", "500"))
 local MAX_TURNS       = tonumber(get_env("VOICEBOT_MAX_TURNS", "8"))
 local MIN_REC_BYTES   = 2000
 local HELLO_TEXT      = get_env("VOICEBOT_HELLO_TEXT", "Hello! How can I help you today?")
@@ -158,7 +149,7 @@ for turn = 1, MAX_TURNS do
   -- Record caller audio
   log("INFO", "Recording turn=" .. turn)
   session:execute("record", string.format(
-    "%s %d %d", rec_wav, RECORD_MAX_SECS, RECORD_SIL_MS
+    "%s %d %d %d", rec_wav, RECORD_MAX_SECS, RECORD_SIL_THR, 15
   ))
 
   local rec_size = file_size(rec_wav)

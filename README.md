@@ -4,7 +4,7 @@
 ![VoIP](https://img.shields.io/badge/VoIP-FreeSWITCH-orange)
 ![AI](https://img.shields.io/badge/AI-LLM%20%2B%20Voice-purple)
 
-> Production-ready AI voice agent built on FreeSWITCH — handles real phone calls end-to-end using Speech-to-Text, LLM reasoning, and Text-to-Speech.
+> Production-grade AI voice agent built on FreeSWITCH — handles real phone calls end-to-end using Speech-to-Text, LLM reasoning, and Text-to-Speech.
 
 > ⚡ This project is under active development and evolving into a full AI Voice Platform (VoIP + LLM + Multi-Agent system)
 ---
@@ -19,6 +19,7 @@ When someone calls in, this system handles the entire conversation autonomously:
 4. **TTS Service** (Piper TTS) converts the LLM response back into natural speech
 5. **FreeSWITCH** plays the audio back to the caller — completing the loop
 
+🎧 **[Listen to a real call →](demo/sample_call.wav)** — 175 seconds, 29 turns, ~1s avg latency on CPU
 **End-to-end latency:** ~1.5–2 seconds on CPU | ~800ms on GPU
 
 ---
@@ -35,14 +36,13 @@ When someone calls in, this system handles the entire conversation autonomously:
 - [x] CPU & GPU auto-detection  
 - [x] Supervisor-based service orchestration  
 - [x] Call simulator for local testing  
-
+- [x] Multi-turn conversation memory per call (30-min session TTL)
 ---
 
 ### 🚧 In Progress
 - [ ] Docker-based deployment  
 - [ ] Streaming STT for lower latency  
 - [ ] Multi-language support  
-- [ ] Context memory across calls  
 - [ ] Call analytics dashboard  
 
 ---
@@ -136,6 +136,7 @@ the system uses a unified Agent API.
 | STT Service | 8001 | OpenAI Whisper | Real-time speech-to-text. Auto-detects CPU or GPU. |
 | TTS Service | 8002 | Piper TTS | Converts LLM text response to audio |
 | Agent Service | 8003 | FastAPI + LLM | Core call logic — connects STT, LLM, TTS, and FreeSWITCH |
+| Pipeline Service | 8004 | FastAPI | Orchestrates STT → Agent → TTS in a single HTTP call |
 | Simulator Service | — | Custom | Call simulator for local testing without a real SIP endpoint |
 
 ---
@@ -198,13 +199,20 @@ cp .env.example .env
 
 | Variable | Required | Description |
 |---|---|---|
-| `GROQ_API_KEY` | Yes (or OpenAI) | LLM backend — get free key at console.groq.com |
+| `GROQ_API_KEY` | Yes | LLM backend — get free key at console.groq.com |
+| `GROQ_MODEL` | Yes | LLM model (default: llama-3.1-8b-instant) |
 | `OPENAI_API_KEY` | Optional | Alternative LLM backend |
-| `ESL_HOST` | Yes | FreeSWITCH ESL host (default: 127.0.0.1) |
-| `ESL_PORT` | Yes | FreeSWITCH ESL port (default: 8021) |
-| `ESL_PASSWORD` | Yes | FreeSWITCH ESL password (default: ClueCon) |
 | `WHISPER_MODEL` | Yes | Model size: tiny / base / small / medium |
-
+| `AGENT_SYSTEM_PROMPT` | Optional | Customize AI persona for your use case |
+| `STT_URL` | Yes | STT service URL (default: http://127.0.0.1:8001) |
+| `AGENT_URL` | Yes | Agent service URL (default: http://127.0.0.1:8003) |
+| `TTS_URL` | Yes | TTS service URL (default: http://127.0.0.1:8002) |
+| `VOICEBOT_PIPELINE_URL` | Yes | Pipeline endpoint called by FreeSWITCH |
+| `VOICEBOT_RECORD_MAX_SECS` | Yes | Max recording seconds per turn (default: 6) |
+| `VOICEBOT_RECORD_SIL_MS` | Yes | Silence threshold to stop recording (default: 500) |
+| `VOICEBOT_MAX_TURNS` | Yes | Max conversation turns per call (default: 8) |
+| `VOICEBOT_HELLO_TEXT` | Optional | Greeting message spoken to caller |
+| `VOICEBOT_BYE_TEXT` | Optional | Goodbye message spoken to caller |
 ---
 
 ## What the Installer Does
@@ -262,7 +270,7 @@ When deploying on Vast.ai GPU instances, open the following ports:
 ```
 5060 UDP/TCP
 16384-16400 UDP
-8001-8003 TCP
+8001-8004 TCP
 ```
 
 ---
@@ -334,17 +342,36 @@ docker-compose logs -f agent_service
 ## Testing
 
 ```bash
-# Verify configuration and environment
-python test_config.py
+# Verify all services are running
+supervisorctl status
 
 # Test STT service directly
 curl -X POST http://localhost:8001/transcribe \
-  -F "audio=@test_audio.wav"
+  -F "file=@test_audio.wav"
 
 # Test TTS service directly
-curl -X POST http://localhost:8002/synthesize \
+curl -G "http://localhost:8002/synthesize" \
+  --data-urlencode "text=Hello, how can I help you today?" \
+  --data-urlencode "format=wav" \
+  --data-urlencode "sample_rate=8000" \
+  -o test_output.wav
+
+# Test Agent service directly
+curl -X POST http://localhost:8003/chat \
   -H "Content-Type: application/json" \
-  -d '{"text": "Hello, how can I help you today?"}'
+  -d '{"text": "My SIP trunk calls are dropping"}'
+
+# Test full Pipeline (STT + Agent + TTS in one call)
+curl -X POST http://localhost:8004/pipeline \
+  -F "audio=@test_audio.wav" \
+  -F "session_id=test123" \
+  -o pipeline_response.wav
+
+# Check health of all services
+curl http://localhost:8001/health
+curl http://localhost:8002/health
+curl http://localhost:8003/health
+curl http://localhost:8004/health
 ```
 
 ---
