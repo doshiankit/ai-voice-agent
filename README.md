@@ -19,7 +19,7 @@ When someone calls in, this system handles the entire conversation autonomously:
 4. **TTS Service** (Piper TTS) converts the LLM response back into natural speech
 5. **FreeSWITCH** plays the audio back to the caller — completing the loop
 
-🎧 **[Listen to a real call →](demo/sample_call.wav)** — 175 seconds, 29 turns, ~1s avg latency on CPU
+🎧 **[Listen to a real call →](demo/sample_call.wav)** — 175 seconds, 6-8 turns, ~1s avg latency on CPU
 **End-to-end latency:** ~1.5–2 seconds on CPU | ~800ms on GPU
 
 ---
