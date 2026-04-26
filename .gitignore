@@ -83,3 +83,6 @@ temp/
 services/tts_service/app/voices/
 .venv
 !freeswitch/sounds/**/*.wav
+!demo/sample_call.wav
+!test_data/blank_audio.wav
+!test_data/demo_audio.wav

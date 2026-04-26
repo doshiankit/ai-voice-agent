@@ -132,7 +132,7 @@ async def _tts_canned(session_id: str):
     """Return TTS of a fallback message when STT yields nothing."""
     tts_resp = await _client.post(
         f"{TTS_URL}/synthesize",
-        json={"text": "Sorry, I didn't catch that. Could you please repeat?",
+        params={"text": "Sorry, I didn't catch that. Could you please repeat?",
               "session_id": session_id},
     )
     tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".wav",
