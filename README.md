@@ -14,7 +14,7 @@
 When someone calls in, this system handles the entire conversation autonomously:
 
 1. **FreeSWITCH** receives the SIP call and streams raw audio
-2. **STT Service** (OpenAI Whisper) converts live speech to text in real time
+2. **STT Service** (faster-whisper, CPU int8) converts live speech to text — with VAD filtering and in-process resampling
 3. **Agent Service** sends the transcript to an LLM for context-aware, intelligent response generation
 4. **TTS Service** (Piper TTS) converts the LLM response back into natural speech
 5. **FreeSWITCH** plays the audio back to the caller — completing the loop
@@ -28,22 +28,32 @@ When someone calls in, this system handles the entire conversation autonomously:
 
 ### ✅ Completed
 
-- [x] Real-time SIP call handling via FreeSWITCH  
-- [x] Live Speech-to-Text (Whisper)  
-- [x] LLM-based response generation (Groq / OpenAI)  
-- [x] Text-to-Speech playback (Piper TTS)  
-- [x] End-to-end call loop automation  
-- [x] CPU & GPU auto-detection  
-- [x] Supervisor-based service orchestration  
-- [x] Call simulator for local testing  
+- [x] Real-time SIP call handling via FreeSWITCH
+- [x] Live Speech-to-Text via faster-whisper (CPU int8 — no GPU needed)
+- [x] VAD filter — silence detection cuts unnecessary STT calls
+- [x] In-process audio resampling (scipy/soundfile — no ffmpeg, ~5ms vs ~120ms)
+- [x] VoIP-specific STT corrections (FreeSWITCH, SIP trunk mis-transcription fixes)
+- [x] LLM-based response generation (Groq / OpenAI — pluggable)
+- [x] TTS-friendly LLM output — strips markdown, converts lists to spoken sentences
+- [x] Text-to-Speech playback (Piper TTS — naturalness tuning: noise_scale, length_scale)
+- [x] Pipeline Service :8004 — single HTTP call from FreeSWITCH handles STT→LLM→TTS
+- [x] Async httpx with persistent connection pool — eliminates per-request TCP overhead
+- [x] Per-stage latency logging (STT / Agent / TTS timings in logs)
 - [x] Multi-turn conversation memory per call (30-min session TTL)
+- [x] CPU & GPU auto-detection
+- [x] Supervisor-based service orchestration
+- [x] Call simulator for local testing
+
 ---
 
 ### 🚧 In Progress
-- [ ] Docker-based deployment  
-- [ ] Streaming STT for lower latency  
-- [ ] Multi-language support  
-- [ ] Call analytics dashboard  
+
+- [ ] Streaming LLM — first audio token target ~300ms
+- [ ] Barge-in — caller interrupts TTS mid-sentence
+- [ ] Docker-based deployment
+- [ ] Streaming STT for lower latency
+- [ ] Multi-language support
+- [ ] Call analytics dashboard
 
 ---
 
@@ -143,10 +153,12 @@ the system uses a unified Agent API.
 
 ## Tech Stack
 
-- **Python** — FastAPI, Uvicorn, Whisper, Piper TTS
-- **Lua** — FreeSWITCH call scripting
-- **FreeSWITCH** — SIP/RTP media server
-- **Groq / OpenAI** — LLM backend (pluggable)
+- **Python** — FastAPI, Uvicorn, faster-whisper (CPU int8), Piper TTS, httpx, scipy, soundfile, numpy
+- **Lua** — FreeSWITCH call scripting and dialplan logic
+- **FreeSWITCH** — SIP/RTP media server, ESL integration
+- **Groq / OpenAI** — LLM backend (pluggable, llama-3.1-8b-instant default)
+- **Homer + sngrep** — SIP capture and call latency tracing
+- **Supervisor** — Process orchestration for all services
 
 ---
 
@@ -313,10 +325,12 @@ Key packages pinned in `requirements.txt`:
 |---|---|---|
 | fastapi | 0.104.1 | Service API framework |
 | uvicorn | 0.24.0 | ASGI server |
-| openai-whisper | 20231117 | Speech-to-text |
-| torch | 2.2.1 | ML runtime for Whisper |
-| torchaudio | 2.2.1 | Audio processing |
-| numpy | 2.1.2 | Numerical computing |
+| faster-whisper | latest | CPU-optimised speech-to-text (int8) |
+| ctranslate2 | latest | Inference engine for faster-whisper |
+| scipy | latest | Audio resampling |
+| soundfile | latest | WAV file I/O |
+| numpy | latest | Numerical computing |
+| httpx | latest | Async HTTP client with connection pooling |
 | pydantic | 2.12.5 | Data validation |
 | tiktoken | 0.12.0 | Token counting |
 
