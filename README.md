@@ -235,7 +235,7 @@ The `install.sh` script fully automates setup:
 - Installs FreeSWITCH with required modules
 - Creates isolated Python virtual environments per service
 - Auto-detects CPU or GPU — installs appropriate PyTorch version
-- Pins NumPy to `2.1.2` for compatibility
+- Pins NumPy to `1.26.4` for STT service (torch 2.2.1 + faster-whisper compatibility)
 - Configures Supervisor to manage all services
 - Starts all services automatically on completion
 
@@ -325,13 +325,12 @@ Key packages pinned in `requirements.txt`:
 |---|---|---|
 | fastapi | 0.104.1 | Service API framework |
 | uvicorn | 0.24.0 | ASGI server |
-| faster-whisper | latest | CPU-optimised speech-to-text (int8) |
-| ctranslate2 | latest | Inference engine for faster-whisper |
-| scipy | latest | Audio resampling |
-| soundfile | latest | WAV file I/O |
-| numpy | latest | Numerical computing |
-| httpx | latest | Async HTTP client with connection pooling |
-| pydantic | 2.12.5 | Data validation |
+| faster-whisper | 1.0.3 | CPU-optimised speech-to-text (int8) |
+| scipy | 1.15.3 | Audio resampling (in-process, no ffmpeg) |
+| soundfile | 0.13.1 | WAV file I/O |
+| numpy | 1.26.4 | Numerical computing (STT — torch 2.2.1 compatible) |
+| httpx | 0.28.1 | Async HTTP client with connection pooling |
+| pydantic | 2.5.0 | Data validation |
 | tiktoken | 0.12.0 | Token counting |
 
 > **Note:** Virtual environments are not committed to git. They are created by `install.sh` per service.
@@ -394,7 +393,7 @@ curl http://localhost:8004/health
 
 - CPU and GPU modes are handled automatically by the installer
 - Designed for single-server deployment
-- STT requires NumPy `2.1.2` — do not downgrade
+- STT service requires NumPy `1.26.4` — torch 2.2.1 is not compatible with NumPy 2.x
 - FreeSWITCH ESL port `8021` should not be exposed publicly
 
 ---
